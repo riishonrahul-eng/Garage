@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Valentine Heart Catch</title>
+  <style>
+    :root {
+      --bg-1: #ffe3ec;
+      --bg-2: #ffd1dc;
+      --card: #fff8fb;
+      --accent: #ff3f7f;
+      --text: #5a1b34;
+      --good: #1f9d65;
+      --bad: #d63245;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      color: var(--text);
+      padding: 1rem;
+    }
+
+    .game-wrap {
+      width: min(900px, 100%);
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      padding: 1rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      padding: 0.5rem;
+    }
+
+    .stats {
+      display: flex;
+      gap: 1rem;
+      font-weight: 700;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      background: var(--accent);
+      color: white;
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 0.1s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    #arena {
+      position: relative;
+      height: 480px;
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.6), transparent 40%),
+        linear-gradient(180deg, #fff0f5, #ffd7e6);
+      overflow: hidden;
+      border: 2px solid #ffc2d5;
+    }
+
+    .heart,
+    .broken {
+      position: absolute;
+      font-size: 2rem;
+      user-select: none;
+      cursor: pointer;
+      animation: fall linear forwards;
+      filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15));
+    }
+
+    .broken {
+      font-size: 1.8rem;
+    }
+
+    @keyframes fall {
+      from {
+        transform: translateY(-60px) rotate(0deg);
+      }
+      to {
+        transform: translateY(560px) rotate(360deg);
+      }
+    }
+
+    .message {
+      text-align: center;
+      font-weight: 700;
+      min-height: 1.4rem;
+    }
+
+    .win {
+      color: var(--good);
+    }
+
+    .lose {
+      color: var(--bad);
+    }
+
+    @media (max-width: 640px) {
+      #arena {
+        height: 380px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-wrap">
+    <section class="hud">
+      <h1>💘 Valentine Heart Catch</h1>
+      <div class="stats">
+        <p>Score: <span id="score">0</span></p>
+        <p>Time: <span id="time">30</span>s</p>
+      </div>
+      <button id="startBtn">Start Game</button>
+    </section>
+
+    <section id="arena" aria-label="Game area"></section>
+    <p class="message" id="message">Catch hearts, avoid broken hearts!</p>
+  </main>
+
+  <script>
+    const arena = document.getElementById("arena");
+    const startBtn = document.getElementById("startBtn");
+    const scoreEl = document.getElementById("score");
+    const timeEl = document.getElementById("time");
+    const messageEl = document.getElementById("message");
+
+    let score = 0;
+    let timeLeft = 30;
+    let gameRunning = false;
+    let spawnInterval;
+    let timerInterval;
+
+    function randomBetween(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function spawnItem() {
+      if (!gameRunning) return;
+
+      const item = document.createElement("button");
+      const isBroken = Math.random() < 0.2;
+      const speed = randomBetween(4, 8);
+      const size = randomBetween(24, 40);
+
+      item.className = isBroken ? "broken" : "heart";
+      item.textContent = isBroken ? "💔" : "💖";
+      item.setAttribute("aria-label", isBroken ? "Broken heart" : "Heart");
+      item.style.left = `${randomBetween(0, arena.clientWidth - 40)}px`;
+      item.style.animationDuration = `${speed}s`;
+      item.style.fontSize = `${size}px`;
+      item.style.background = "transparent";
+      item.style.padding = "0";
+      item.style.border = "none";
+
+      item.addEventListener("click", () => {
+        if (!gameRunning) return;
+        score += isBroken ? -2 : 1;
+        scoreEl.textContent = score;
+        item.remove();
+      });
+
+      item.addEventListener("animationend", () => {
+        if (item.isConnected) item.remove();
+      });
+
+      arena.appendChild(item);
+    }
+
+    function resetGameState() {
+      score = 0;
+      timeLeft = 30;
+      scoreEl.textContent = score;
+      timeEl.textContent = timeLeft;
+      messageEl.textContent = "Catch hearts, avoid broken hearts!";
+      messageEl.className = "message";
+      arena.innerHTML = "";
+    }
+
+    function stopGame() {
+      gameRunning = false;
+      clearInterval(spawnInterval);
+      clearInterval(timerInterval);
+      startBtn.disabled = false;
+
+      if (score >= 20) {
+        messageEl.textContent = `You win! Final score: ${score} 💝`;
+        messageEl.className = "message win";
+      } else {
+        messageEl.textContent = `Game over! Score ${score}. Try again for 20+!`;
+        messageEl.className = "message lose";
+      }
+    }
+
+    function startGame() {
+      resetGameState();
+      gameRunning = true;
+      startBtn.disabled = true;
+
+      spawnInterval = setInterval(spawnItem, 550);
+      timerInterval = setInterval(() => {
+        timeLeft -= 1;
+        timeEl.textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+          stopGame();
+        }
+      }, 1000);
+    }
+
+    startBtn.addEventListener("click", startGame);
+  </script>
+</body>
+</html>
